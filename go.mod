@@ -1,6 +1,6 @@
 module github.com/go-zoox/websocket
 
-go 1.21.3
+go 1.20
 
 require (
 	github.com/go-zoox/cli v1.3.6
