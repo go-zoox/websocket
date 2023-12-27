@@ -169,7 +169,6 @@ func (s *server) ServeConn(conn connClass.Conn) error {
 
 	for {
 		mt, message, err := rawConn.ReadMessage()
-		fmt.Println("mt", mt, "message", message, "err", err)
 		if err != nil {
 			if v, ok := err.(*websocket.CloseError); ok {
 				conn.Emit(event.TypeClose, &event.PayloadClose{

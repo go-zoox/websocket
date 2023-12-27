@@ -3,8 +3,8 @@ module github.com/go-zoox/websocket
 go 1.20
 
 require (
-	github.com/go-zoox/cache v1.0.7
-	github.com/go-zoox/cli v1.3.6
+	github.com/go-zoox/cli v1.3.7
+	github.com/go-zoox/core-utils v1.3.4
 	github.com/go-zoox/eventemitter v1.0.9
 	github.com/go-zoox/logger v1.4.6
 	github.com/go-zoox/uuid v0.0.1
@@ -12,24 +12,19 @@ require (
 )
 
 require (
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-zoox/chalk v1.0.1 // indirect
 	github.com/go-zoox/config v1.2.10 // indirect
-	github.com/go-zoox/core-utils v1.2.9 // indirect
 	github.com/go-zoox/datetime v1.1.0 // indirect
-	github.com/go-zoox/dotenv v1.2.3 // indirect
+	github.com/go-zoox/dotenv v1.2.4 // indirect
 	github.com/go-zoox/encoding v1.2.1 // indirect
 	github.com/go-zoox/errors v1.0.2 // indirect
 	github.com/go-zoox/fs v1.3.13 // indirect
 	github.com/go-zoox/ini v1.0.4 // indirect
-	github.com/go-zoox/kv v1.5.9 // indirect
 	github.com/go-zoox/safe v1.0.1 // indirect
-	github.com/go-zoox/tag v1.2.2 // indirect
+	github.com/go-zoox/tag v1.2.5 // indirect
 	github.com/goccy/go-yaml v1.9.8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
