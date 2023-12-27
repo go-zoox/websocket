@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/go-zoox/cli v1.3.6
-	github.com/go-zoox/eventemitter v1.0.8
+	github.com/go-zoox/eventemitter v1.0.9
 	github.com/go-zoox/logger v1.4.6
 	github.com/go-zoox/uuid v0.0.1
 	github.com/gorilla/websocket v1.5.1
@@ -41,5 +41,3 @@ require (
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )
-
-// replace github.com/go-zoox/eventemitter => ../eventemitter

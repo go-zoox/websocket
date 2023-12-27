@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -27,6 +28,9 @@ type Conn interface {
 	Raw() *websocket.Conn
 	//
 	Request() *http.Request
+	//
+	On(typ string, handler eventemitter.Handle)
+	Emit(typ string, payload any)
 }
 
 const (
@@ -35,6 +39,7 @@ const (
 )
 
 type conn struct {
+	ee  *eventemitter.EventEmitter
 	id  string
 	ctx context.Context
 	raw *websocket.Conn
@@ -47,6 +52,8 @@ func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
 		ctx: ctx,
 		raw: raw,
 		req: req,
+		//
+		ee: eventemitter.New(),
 	}
 }
 
@@ -59,6 +66,7 @@ func (c *conn) Context() context.Context {
 }
 
 func (c *conn) Close() error {
+	c.ee.Stop()
 	return c.raw.Close()
 }
 
@@ -88,4 +96,12 @@ func (c *conn) Raw() *websocket.Conn {
 
 func (c *conn) Request() *http.Request {
 	return c.req
+}
+
+func (c *conn) On(typ string, handler eventemitter.Handle) {
+	c.ee.On(typ, handler)
+}
+
+func (c *conn) Emit(typ string, payload any) {
+	c.ee.Emit(typ, payload)
 }

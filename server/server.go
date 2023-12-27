@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/websocket/conn"
 )
 
@@ -35,7 +34,15 @@ type Option struct {
 
 type server struct {
 	opt *Option
-	ee  *eventemitter.EventEmitter
+	//
+	cbs struct {
+		errors   []func(conn conn.Conn, err error) error
+		connects []func(conn conn.Conn) error
+		closes   []func(conn conn.Conn) error
+		messages []func(conn conn.Conn, typ int, message []byte) error
+		pings    []func(conn conn.Conn, message []byte) error
+		pongs    []func(conn conn.Conn, message []byte) error
+	}
 }
 
 func New(opts ...func(opt *Option)) (Server, error) {
@@ -46,7 +53,6 @@ func New(opts ...func(opt *Option)) (Server, error) {
 
 	s := &server{
 		opt: opt,
-		ee:  eventemitter.New(),
 	}
 
 	// @TODO auto listen ping + sennd pong
