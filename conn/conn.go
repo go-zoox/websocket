@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-zoox/cache"
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/uuid"
 	"github.com/gorilla/websocket"
@@ -31,6 +32,8 @@ type Conn interface {
 	//
 	On(typ string, handler eventemitter.Handle)
 	Emit(typ string, payload any)
+	//
+	Cache() cache.Cache
 }
 
 const (
@@ -39,11 +42,13 @@ const (
 )
 
 type conn struct {
-	ee  *eventemitter.EventEmitter
 	id  string
 	ctx context.Context
 	raw *websocket.Conn
 	req *http.Request
+	//
+	ee    *eventemitter.EventEmitter
+	cache cache.Cache
 }
 
 func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
@@ -53,7 +58,8 @@ func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
 		raw: raw,
 		req: req,
 		//
-		ee: eventemitter.New(),
+		ee:    eventemitter.New(),
+		cache: cache.New(),
 	}
 }
 
@@ -104,4 +110,8 @@ func (c *conn) On(typ string, handler eventemitter.Handle) {
 
 func (c *conn) Emit(typ string, payload any) {
 	c.ee.Emit(typ, payload)
+}
+
+func (c *conn) Cache() cache.Cache {
+	return c.cache
 }
