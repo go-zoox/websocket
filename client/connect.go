@@ -1,6 +1,9 @@
 package client
 
 import (
+	"fmt"
+	"io"
+
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
@@ -25,9 +28,18 @@ func (c *client) OnConnect(fn func(conn conn.Conn) error) {
 }
 
 func (c *client) Connect() error {
-	rawConn, _, err := websocket.DefaultDialer.DialContext(c.opt.Context, c.opt.Addr, nil)
+	rawConn, response, err := websocket.DefaultDialer.DialContext(c.opt.Context, c.opt.Addr, c.opt.Headers)
 	if err != nil {
-		return err
+		if response == nil || response.Body == nil {
+			return fmt.Errorf("failed to connect at %s (error: %s)", c.opt.Addr, err)
+		}
+
+		body, errB := io.ReadAll(response.Body)
+		if errB != nil {
+			return fmt.Errorf("failed to connect at %s (status: %s, error: %s)", c.opt.Addr, response.Status, err)
+		}
+
+		return fmt.Errorf("failed to connect at %s (status: %d, response: %s, error: %v)", c.opt.Addr, response.StatusCode, string(body), err)
 	}
 	// defer conn.Close()
 
@@ -53,6 +65,12 @@ func (c *client) Connect() error {
 		Conn: connIns,
 	})
 
+	go c.handleConn(connIns, rawConn)
+
+	return nil
+}
+
+func (c *client) handleConn(connIns conn.Conn, rawConn *websocket.Conn) {
 	for {
 		mt, message, err := rawConn.ReadMessage()
 		if err != nil {
@@ -63,14 +81,14 @@ func (c *client) Connect() error {
 					Message: v.Text,
 				})
 
-				return err
+				return
 			}
 
 			c.ee.Emit(event.TypeError, &event.PayloadError{
 				Conn:  connIns,
 				Error: err,
 			})
-			return err
+			return
 		}
 
 		c.ee.Emit(event.TypeMessage, &event.PayloadMessage{

@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/go-zoox/eventemitter"
@@ -39,6 +40,7 @@ type client struct {
 type Option struct {
 	Context context.Context `json:"context"`
 	Addr    string          `json:"addr"`
+	Headers http.Header     `json:"headers"`
 }
 
 func New(opts ...func(opt *Option)) (Client, error) {

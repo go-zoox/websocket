@@ -10,12 +10,16 @@ type Conn = conn.Conn
 
 type Server = server.Server
 
+type ServerOption = server.Option
+
 type Client = client.Client
 
-func NewServer(opts ...func(opt *server.Option)) (Server, error) {
+type ClientOption = client.Option
+
+func NewServer(opts ...func(opt *ServerOption)) (Server, error) {
 	return server.New(opts...)
 }
 
-func NewClient(opts ...func(opt *client.Option)) (Client, error) {
+func NewClient(opts ...func(opt *ClientOption)) (Client, error) {
 	return client.New(opts...)
 }
