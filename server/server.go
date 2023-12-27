@@ -25,6 +25,9 @@ type Server interface {
 	OnBinaryMessage(func(conn conn.Conn, message []byte) error)
 	//
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
+	//
+	CreateConn(w http.ResponseWriter, r *http.Request) (conn.Conn, error)
+	ServeConn(connIns conn.Conn) error
 }
 
 type Option struct {

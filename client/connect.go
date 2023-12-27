@@ -31,7 +31,7 @@ func (c *client) Connect() error {
 	}
 	// defer conn.Close()
 
-	connIns := conn.New(c.opt.Context, rawConn)
+	connIns := conn.New(c.opt.Context, rawConn, nil)
 	c.conn = connIns
 
 	rawConn.SetPingHandler(func(appData string) error {

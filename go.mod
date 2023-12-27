@@ -4,8 +4,9 @@ go 1.20
 
 require (
 	github.com/go-zoox/cli v1.3.6
-	github.com/go-zoox/eventemitter v1.0.6
+	github.com/go-zoox/eventemitter v1.0.8
 	github.com/go-zoox/logger v1.4.6
+	github.com/go-zoox/uuid v0.0.1
 	github.com/gorilla/websocket v1.5.1
 )
 
@@ -24,7 +25,6 @@ require (
 	github.com/go-zoox/ini v1.0.4 // indirect
 	github.com/go-zoox/safe v1.0.1 // indirect
 	github.com/go-zoox/tag v1.2.2 // indirect
-	github.com/go-zoox/uuid v0.0.1 // indirect
 	github.com/goccy/go-yaml v1.9.8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect

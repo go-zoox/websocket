@@ -2,12 +2,18 @@ package conn
 
 import (
 	"context"
+	"net/http"
 	"time"
 
+	"github.com/go-zoox/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Conn interface {
+	ID() string
+	//
+	Context() context.Context
+	//
 	Close() error
 	//
 	WriteMessage(typ int, msg []byte) error
@@ -17,6 +23,10 @@ type Conn interface {
 	//
 	Ping(msg []byte) error
 	Pong(msg []byte) error
+	//
+	Raw() *websocket.Conn
+	//
+	Request() *http.Request
 }
 
 const (
@@ -25,15 +35,23 @@ const (
 )
 
 type conn struct {
+	id  string
 	ctx context.Context
 	raw *websocket.Conn
+	req *http.Request
 }
 
-func New(ctx context.Context, raw *websocket.Conn) Conn {
+func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
 	return &conn{
+		id:  uuid.V4(),
 		ctx: ctx,
 		raw: raw,
+		req: req,
 	}
+}
+
+func (c *conn) ID() string {
+	return c.id
 }
 
 func (c *conn) Context() context.Context {
@@ -62,4 +80,12 @@ func (c *conn) Ping(msg []byte) error {
 
 func (c *conn) Pong(msg []byte) error {
 	return c.raw.WriteControl(websocket.PongMessage, msg, time.Now().Add(time.Second))
+}
+
+func (c *conn) Raw() *websocket.Conn {
+	return c.raw
+}
+
+func (c *conn) Request() *http.Request {
+	return c.req
 }
