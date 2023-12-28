@@ -33,8 +33,8 @@ type Conn interface {
 	On(typ string, handler eventemitter.Handle)
 	Emit(typ string, payload any)
 	//
-	Get(key string) (interface{}, error)
-	Set(key string, value interface{}) error
+	Get(key string) any
+	Set(key string, value any) error
 }
 
 const (
@@ -113,10 +113,10 @@ func (c *conn) Emit(typ string, payload any) {
 	c.ee.Emit(typ, payload)
 }
 
-func (c *conn) Get(key string) (interface{}, error) {
+func (c *conn) Get(key string) any {
 	return c.cache.Get(key)
 }
 
-func (c *conn) Set(key string, value interface{}) error {
+func (c *conn) Set(key string, value any) error {
 	return c.cache.Set(key, value)
 }
