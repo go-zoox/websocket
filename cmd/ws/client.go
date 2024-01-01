@@ -19,6 +19,11 @@ func Client() *cli.Command {
 				Usage: "websocket server address",
 				Value: "ws://localhost:9000",
 			},
+			&cli.StringFlag{
+				Name:  "message",
+				Usage: "websocket server message",
+				Value: "hello world",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			wc, err := client.New(func(opt *client.Option) {
@@ -50,7 +55,7 @@ func Client() *cli.Command {
 
 			wc.OnConnect(func(conn conn.Conn) error {
 				fmt.Println("websocket client connected")
-				conn.Ping(nil)
+				// conn.Ping(nil)
 
 				i := 0
 				for {
@@ -60,7 +65,7 @@ func Client() *cli.Command {
 					i++
 
 					time.Sleep(1 * time.Second)
-					err = conn.WriteTextMessage([]byte(fmt.Sprintf("hello world %d", time.Now().Unix())))
+					err = conn.WriteTextMessage([]byte(fmt.Sprintf("%s - %d", c.String("message"), time.Now().Unix())))
 					if err != nil {
 						return err
 					}
@@ -96,7 +101,15 @@ func Client() *cli.Command {
 
 			// wc.Close()
 
-			return wc.Connect()
+			if err := wc.Connect(); err != nil {
+				return err
+			}
+
+			for {
+				select {}
+			}
+
+			return nil
 		},
 	}
 }
