@@ -26,7 +26,7 @@ type Server interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	//
 	CreateConn(w http.ResponseWriter, r *http.Request) (conn.Conn, error)
-	ServeConn(connIns conn.Conn) error
+	ServeConn(connIns conn.Conn)
 }
 
 type Option struct {

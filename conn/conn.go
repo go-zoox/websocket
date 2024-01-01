@@ -18,6 +18,8 @@ type Conn interface {
 	//
 	Close() error
 	//
+	ReadMessage() (int, []byte, error)
+	//
 	WriteMessage(typ int, msg []byte) error
 	//
 	WriteTextMessage(msg []byte) error
@@ -119,4 +121,8 @@ func (c *conn) Get(key string) any {
 
 func (c *conn) Set(key string, value any) error {
 	return c.cache.Set(key, value)
+}
+
+func (c *conn) ReadMessage() (int, []byte, error) {
+	return c.raw.ReadMessage()
 }

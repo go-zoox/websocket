@@ -16,10 +16,5 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.ServeConn(connIns); err != nil {
-		connIns.Emit(event.TypeError, &event.PayloadError{
-			Error: fmt.Errorf("%v", err),
-		})
-		return
-	}
+	go s.ServeConn(connIns)
 }
