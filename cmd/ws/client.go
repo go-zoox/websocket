@@ -59,7 +59,7 @@ func Client() *cli.Command {
 
 				i := 0
 				for {
-					if i > 100 {
+					if i > 5 {
 						continue
 					}
 					i++

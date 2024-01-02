@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-zoox/cli"
 	"github.com/go-zoox/websocket/conn"
@@ -54,6 +55,7 @@ func Server() *cli.Command {
 
 			s.OnMessage(func(conn conn.Conn, typ int, message []byte) error {
 				fmt.Println("websocket server message:", typ, string(message))
+				time.Sleep(2 * time.Second)
 				return nil
 			})
 
