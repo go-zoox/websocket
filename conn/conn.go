@@ -84,11 +84,11 @@ func (c *conn) WriteMessage(typ int, msg []byte) error {
 }
 
 func (c *conn) WriteTextMessage(msg []byte) error {
-	return c.raw.WriteMessage(TextMessage, msg)
+	return c.WriteMessage(TextMessage, msg)
 }
 
 func (c *conn) WriteBinaryMessage(msg []byte) error {
-	return c.raw.WriteMessage(BinaryMessage, msg)
+	return c.WriteMessage(BinaryMessage, msg)
 }
 
 func (c *conn) Ping(msg []byte) error {

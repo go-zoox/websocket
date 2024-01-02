@@ -7,6 +7,7 @@ require (
 	github.com/go-zoox/core-utils v1.3.5
 	github.com/go-zoox/eventemitter v1.0.9
 	github.com/go-zoox/logger v1.4.6
+	github.com/go-zoox/random v1.0.4
 	github.com/go-zoox/uuid v0.0.1
 	github.com/gorilla/websocket v1.5.1
 )
