@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/go-zoox/eventemitter"
-	"github.com/go-zoox/logger"
 	connClass "github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
 	"github.com/gorilla/websocket"
@@ -41,35 +40,18 @@ func (s *server) CreateConn(w http.ResponseWriter, r *http.Request) (connClass.C
 		return nil
 	})
 
-	// event::error
-	for _, cb := range s.cbs.errors {
-		func(cb func(conn connClass.Conn, err error) error) {
-			conn.On(event.TypeError, eventemitter.HandleFunc(func(payload any) {
-				p, ok := payload.(*event.PayloadError)
-				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
-					return
-				}
-
-				if err := cb(p.Conn, p.Error); err != nil {
-					logger.Errorf("failed to handle error: %v", err)
-				}
-			}))
-		}(cb)
-	}
-
 	// event::connect
 	for _, cb := range s.cbs.connects {
 		func(cb func(conn connClass.Conn) error) {
 			conn.On(event.TypeConnect, eventemitter.HandleFunc(func(payload any) {
 				p, ok := payload.(*event.PayloadConnect)
 				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
+					s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
 					return
 				}
 
 				if err := cb(p.Conn); err != nil {
-					conn.Emit(event.TypeError, &event.PayloadError{
+					s.ee.Emit(event.TypeError, &event.PayloadError{
 						Conn:  p.Conn,
 						Error: err,
 					})
@@ -84,12 +66,12 @@ func (s *server) CreateConn(w http.ResponseWriter, r *http.Request) (connClass.C
 			conn.On(event.TypeClose, eventemitter.HandleFunc(func(payload any) {
 				p, ok := payload.(*event.PayloadClose)
 				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
+					s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
 					return
 				}
 
 				if err := cb(p.Conn); err != nil {
-					conn.Emit(event.TypeError, &event.PayloadError{
+					s.ee.Emit(event.TypeError, &event.PayloadError{
 						Conn:  p.Conn,
 						Error: err,
 					})
@@ -104,12 +86,12 @@ func (s *server) CreateConn(w http.ResponseWriter, r *http.Request) (connClass.C
 			conn.On(event.TypePing, eventemitter.HandleFunc(func(payload any) {
 				p, ok := payload.(*event.PayloadPing)
 				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
+					s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
 					return
 				}
 
 				if err := cb(p.Conn, p.Message); err != nil {
-					conn.Emit(event.TypeError, &event.PayloadError{
+					s.ee.Emit(event.TypeError, &event.PayloadError{
 						Conn:  p.Conn,
 						Error: err,
 					})
@@ -125,12 +107,12 @@ func (s *server) CreateConn(w http.ResponseWriter, r *http.Request) (connClass.C
 			conn.On(event.TypePong, eventemitter.HandleFunc(func(payload any) {
 				p, ok := payload.(*event.PayloadPong)
 				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
+					s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
 					return
 				}
 
 				if err := cb(p.Conn, p.Message); err != nil {
-					conn.Emit(event.TypeError, &event.PayloadError{
+					s.ee.Emit(event.TypeError, &event.PayloadError{
 						Conn:  p.Conn,
 						Error: err,
 					})
@@ -145,12 +127,12 @@ func (s *server) CreateConn(w http.ResponseWriter, r *http.Request) (connClass.C
 			conn.On(event.TypeMessage, eventemitter.HandleFunc(func(payload any) {
 				p, ok := payload.(*event.PayloadMessage)
 				if !ok {
-					conn.Emit(event.TypeError, event.ErrInvalidPayload)
+					s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
 					return
 				}
 
 				if err := cb(p.Conn, p.Type, p.Message); err != nil {
-					conn.Emit(event.TypeError, &event.PayloadError{
+					s.ee.Emit(event.TypeError, &event.PayloadError{
 						Conn:  p.Conn,
 						Error: err,
 					})
@@ -167,7 +149,7 @@ func (s *server) ServeConn(conn connClass.Conn) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			conn.Emit(event.TypeError, &event.PayloadError{
+			s.ee.Emit(event.TypeError, &event.PayloadError{
 				Conn:  conn,
 				Error: fmt.Errorf("%v", err),
 			})
@@ -190,7 +172,7 @@ func (s *server) ServeConn(conn connClass.Conn) {
 				return
 			}
 
-			conn.Emit(event.TypeError, &event.PayloadError{
+			s.ee.Emit(event.TypeError, &event.PayloadError{
 				Conn:  conn,
 				Error: err,
 			})
@@ -201,12 +183,12 @@ func (s *server) ServeConn(conn connClass.Conn) {
 			defer func() {
 				if err := recover(); err != nil {
 					if v, ok := err.(error); ok {
-						conn.Emit(event.TypeError, &event.PayloadError{
+						s.ee.Emit(event.TypeError, &event.PayloadError{
 							Conn:  conn,
 							Error: v,
 						})
 					} else {
-						conn.Emit(event.TypeError, &event.PayloadError{
+						s.ee.Emit(event.TypeError, &event.PayloadError{
 							Conn:  conn,
 							Error: fmt.Errorf("%v", err),
 						})

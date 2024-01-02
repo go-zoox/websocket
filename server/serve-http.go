@@ -16,5 +16,5 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go s.ServeConn(connIns)
+	s.ServeConn(connIns)
 }
