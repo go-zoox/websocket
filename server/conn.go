@@ -179,28 +179,10 @@ func (s *server) ServeConn(conn connClass.Conn) {
 			return
 		}
 
-		go func() {
-			defer func() {
-				if err := recover(); err != nil {
-					if v, ok := err.(error); ok {
-						s.ee.Emit(event.TypeError, &event.PayloadError{
-							Conn:  conn,
-							Error: v,
-						})
-					} else {
-						s.ee.Emit(event.TypeError, &event.PayloadError{
-							Conn:  conn,
-							Error: fmt.Errorf("%v", err),
-						})
-					}
-				}
-			}()
-
-			conn.Emit(event.TypeMessage, &event.PayloadMessage{
-				Conn:    conn,
-				Type:    mt,
-				Message: message,
-			})
-		}()
+		conn.Emit(event.TypeMessage, &event.PayloadMessage{
+			Conn:    conn,
+			Type:    mt,
+			Message: message,
+		})
 	}
 }
