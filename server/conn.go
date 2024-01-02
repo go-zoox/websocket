@@ -179,7 +179,8 @@ func (s *server) ServeConn(conn connClass.Conn) {
 			return
 		}
 
-		conn.Emit(event.TypeMessage, &event.PayloadMessage{
+		// do not hold the message reader
+		go conn.Emit(event.TypeMessage, &event.PayloadMessage{
 			Conn:    conn,
 			Type:    mt,
 			Message: message,
