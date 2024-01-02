@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/websocket/conn"
@@ -56,17 +55,9 @@ func New(opts ...func(opt *Option)) (Client, error) {
 		ee:  eventemitter.New(),
 	}
 
-	// auto listen pong + send ping
-	client.OnPong(func(conn conn.Conn, message []byte) error {
-		time.Sleep(15 * time.Second)
-		return conn.Ping(message)
-	})
-
-	// auto ping first
-	client.OnConnect(func(conn conn.Conn) error {
-		time.Sleep(5 * time.Second)
-
-		return conn.Ping(nil)
+	// listen server heartbeat (server ping + client pong)
+	client.OnPing(func(conn conn.Conn, message []byte) error {
+		return conn.Pong(message)
 	})
 
 	return client, nil
