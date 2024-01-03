@@ -6,4 +6,4 @@ type PayloadConnect struct {
 	Conn conn.Conn
 }
 
-const TypeConnect = "connect"
+const TypeConnect = "[internal] connect"

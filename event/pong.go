@@ -7,4 +7,4 @@ type PayloadPong struct {
 	Message []byte
 }
 
-const TypePong = "pong"
+const TypePong = "[internal] pong"

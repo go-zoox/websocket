@@ -7,4 +7,4 @@ type PayloadPing struct {
 	Message []byte
 }
 
-const TypePing = "ping"
+const TypePing = "[internal] ping"

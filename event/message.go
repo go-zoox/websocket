@@ -8,4 +8,4 @@ type PayloadMessage struct {
 	Message []byte
 }
 
-const TypeMessage = "message"
+const TypeMessage = "[internal] message"

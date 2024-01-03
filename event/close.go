@@ -9,4 +9,4 @@ type PayloadClose struct {
 	Message string
 }
 
-const TypeClose = "close"
+const TypeClose = "[internal] close"
