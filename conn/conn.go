@@ -7,7 +7,9 @@ import (
 
 	"github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/eventemitter"
+	"github.com/go-zoox/logger"
 	"github.com/go-zoox/uuid"
+	"github.com/go-zoox/websocket/event"
 	"github.com/gorilla/websocket"
 )
 
@@ -37,6 +39,14 @@ type Conn interface {
 	//
 	Get(key string) any
 	Set(key string, value any) error
+	//
+	OnError(func(err error) error)
+	OnClose(func(code int, message string) error)
+	OnPing(func(appData []byte) error)
+	OnPong(func(appData []byte) error)
+	OnMessage(func(typ int, message []byte) error)
+	//
+	OnConnect(cb func() error)
 }
 
 const (
@@ -125,4 +135,99 @@ func (c *conn) Set(key string, value any) error {
 
 func (c *conn) ReadMessage() (int, []byte, error) {
 	return c.raw.ReadMessage()
+}
+
+func (c *conn) OnError(cb func(err error) error) {
+	c.On(event.TypeError, eventemitter.HandleFunc(func(payload any) {
+		p, ok := payload.(*event.PayloadError)
+		if !ok {
+			// s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
+			logger.Errorf("invalid payload: %v", payload)
+			return
+		}
+
+		if err := cb(p.Error); err != nil {
+			logger.Errorf("failed to handle error: %v", err)
+		}
+	}))
+}
+
+func (c *conn) OnClose(cb func(code int, message string) error) {
+	c.On(event.TypeClose, eventemitter.HandleFunc(func(payload any) {
+		p, ok := payload.(*event.PayloadClose)
+		if !ok {
+			c.Emit(event.TypeError, event.ErrInvalidPayload)
+			return
+		}
+
+		if err := cb(p.Code, p.Message); err != nil {
+			c.Emit(event.TypeError, &event.PayloadError{
+				Error: err,
+			})
+		}
+	}))
+}
+
+func (c *conn) OnPing(cb func(appData []byte) error) {
+	c.On(event.TypePing, eventemitter.HandleFunc(func(payload any) {
+		p, ok := payload.(*event.PayloadPing)
+		if !ok {
+			c.Emit(event.TypeError, event.ErrInvalidPayload)
+			return
+		}
+
+		if err := cb(p.Message); err != nil {
+			c.Emit(event.TypeError, &event.PayloadError{
+				Error: err,
+			})
+		}
+	}))
+}
+
+func (c *conn) OnPong(cb func(appData []byte) error) {
+	c.On(event.TypePong, eventemitter.HandleFunc(func(payload any) {
+		p, ok := payload.(*event.PayloadPong)
+		if !ok {
+			c.Emit(event.TypeError, event.ErrInvalidPayload)
+			return
+		}
+
+		if err := cb(p.Message); err != nil {
+			c.Emit(event.TypeError, &event.PayloadError{
+				Error: err,
+			})
+		}
+	}))
+}
+
+func (c *conn) OnMessage(cb func(typ int, message []byte) error) {
+	c.On(event.TypeMessage, eventemitter.HandleFunc(func(payload any) {
+		p, ok := payload.(*event.PayloadMessage)
+		if !ok {
+			c.Emit(event.TypeError, event.ErrInvalidPayload)
+			return
+		}
+
+		if err := cb(p.Type, p.Message); err != nil {
+			c.Emit(event.TypeError, &event.PayloadError{
+				Error: err,
+			})
+		}
+	}))
+}
+
+func (c *conn) OnConnect(cb func() error) {
+	c.On(event.TypeConnect, eventemitter.HandleFunc(func(payload any) {
+		_, ok := payload.(*event.PayloadConnect)
+		if !ok {
+			c.Emit(event.TypeError, event.ErrInvalidPayload)
+			return
+		}
+
+		if err := cb(); err != nil {
+			c.Emit(event.TypeError, &event.PayloadError{
+				Error: err,
+			})
+		}
+	}))
 }

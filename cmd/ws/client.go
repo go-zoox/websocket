@@ -38,7 +38,7 @@ func Client() *cli.Command {
 				return nil
 			})
 
-			wc.OnClose(func(conn conn.Conn) error {
+			wc.OnClose(func(conn conn.Conn, code int, message string) error {
 				fmt.Println("websocket client closed")
 				return nil
 			})

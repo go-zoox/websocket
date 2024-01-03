@@ -7,8 +7,6 @@ import (
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket/conn"
-	connClass "github.com/go-zoox/websocket/conn"
-	"github.com/go-zoox/websocket/event"
 )
 
 type Server interface {
@@ -17,7 +15,7 @@ type Server interface {
 	OnError(func(conn conn.Conn, err error) error)
 	//
 	OnConnect(func(conn conn.Conn) error)
-	OnClose(func(conn conn.Conn) error)
+	OnClose(func(conn conn.Conn, code int, message string) error)
 	//
 	OnMessage(func(conn conn.Conn, typ int, message []byte) error)
 	//
@@ -44,7 +42,7 @@ type server struct {
 	cbs struct {
 		errors   []func(conn conn.Conn, err error) error
 		connects []func(conn conn.Conn) error
-		closes   []func(conn conn.Conn) error
+		closes   []func(conn conn.Conn, code int, message string) error
 		messages []func(conn conn.Conn, typ int, message []byte) error
 		pings    []func(conn conn.Conn, message []byte) error
 		pongs    []func(conn conn.Conn, message []byte) error
@@ -60,24 +58,6 @@ func New(opts ...func(opt *Option)) (Server, error) {
 	s := &server{
 		opt: opt,
 		ee:  eventemitter.New(),
-	}
-
-	// event::error
-	for _, cb := range s.cbs.errors {
-		func(cb func(conn connClass.Conn, err error) error) {
-			s.ee.On(event.TypeError, eventemitter.HandleFunc(func(payload any) {
-				p, ok := payload.(*event.PayloadError)
-				if !ok {
-					// s.ee.Emit(event.TypeError, event.ErrInvalidPayload)
-					logger.Errorf("invalid payload: %v", payload)
-					return
-				}
-
-				if err := cb(p.Conn, p.Error); err != nil {
-					logger.Errorf("failed to handle error: %v", err)
-				}
-			}))
-		}(cb)
 	}
 
 	// @TODO auto listen ping + sennd pong

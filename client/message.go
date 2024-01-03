@@ -1,26 +1,11 @@
 package client
 
 import (
-	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/websocket/conn"
-	"github.com/go-zoox/websocket/event"
 )
 
 func (c *client) OnMessage(fn func(conn conn.Conn, mt int, message []byte) error) {
-	c.ee.On(event.TypeMessage, eventemitter.HandleFunc(func(payload any) {
-		p, ok := payload.(*event.PayloadMessage)
-		if !ok {
-			c.ee.Emit(event.TypeError, event.ErrInvalidPayload)
-			return
-		}
-
-		if err := fn(p.Conn, p.Type, p.Message); err != nil {
-			c.ee.Emit(event.TypeError, &event.PayloadError{
-				Conn:  p.Conn,
-				Error: err,
-			})
-		}
-	}))
+	c.cbs.messages = append(c.cbs.messages, fn)
 }
 
 func (c *client) OnTextMessage(cb func(conn conn.Conn, message []byte) error) {
