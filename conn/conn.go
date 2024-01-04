@@ -86,6 +86,7 @@ func (c *conn) Context() context.Context {
 
 func (c *conn) Close() error {
 	c.ee.Stop()
+
 	return c.raw.Close()
 }
 

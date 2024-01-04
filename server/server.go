@@ -8,6 +8,8 @@ import (
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket/conn"
+	"github.com/go-zoox/websocket/server/plugin"
+	"github.com/go-zoox/websocket/server/plugin/heartbeat"
 )
 
 type Server interface {
@@ -29,12 +31,14 @@ type Server interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	//
 	CreateConn(w http.ResponseWriter, r *http.Request) (conn.Conn, error)
-	ServeConn(connIns conn.Conn)
+	ServeConn(conn conn.Conn)
+	//
+	Plugin(plugin plugin.Plugin) error
 }
 
 type Option struct {
-	HearbeatInterval time.Duration
-	HeartbeatTimeout time.Duration
+	HeartbeatInterval time.Duration
+	HeartbeatTimeout  time.Duration
 }
 
 type server struct {
@@ -50,72 +54,47 @@ type server struct {
 		pings    []func(conn conn.Conn, message []byte) error
 		pongs    []func(conn conn.Conn, message []byte) error
 	}
+	//
+	plugins map[string]plugin.Plugin
 }
 
 func New(opts ...func(opt *Option)) (Server, error) {
 	opt := &Option{
-		HearbeatInterval: 25 * time.Second,
-		HeartbeatTimeout: 15 * time.Second,
+		HeartbeatInterval: 25 * time.Second,
+		HeartbeatTimeout:  15 * time.Second,
 	}
 	for _, o := range opts {
 		o(opt)
 	}
 
-	if opt.HearbeatInterval < opt.HeartbeatTimeout {
+	if opt.HeartbeatInterval < opt.HeartbeatTimeout {
 		return nil, fmt.Errorf("heartbeat interval must be greater than heartbeat timeout")
 	}
 
 	s := &server{
-		opt: opt,
-		ee:  eventemitter.New(),
+		opt:     opt,
+		ee:      eventemitter.New(),
+		plugins: make(map[string]plugin.Plugin),
 	}
 
-	// @TODO auto listen ping + sennd pong
-	s.OnPong(func(conn conn.Conn, message []byte) error {
-		conn.Get("heartbeat").(chan struct{}) <- struct{}{}
-		return nil
-	})
-
-	//
 	s.OnConnect(func(conn conn.Conn) error {
-		ch := make(chan struct{})
-		conn.Set("heartbeat", ch)
-
-		// heartbeat
-		go func() {
-			time.After(opt.HearbeatInterval)
-			for {
-				select {
-				case <-conn.Context().Done():
-					logger.Debugf("[heartbeat][interval] context done => cancel")
-					return
-				case <-time.After(opt.HearbeatInterval):
-					logger.Debugf("[heartbeat][interval] send heartbeat ->")
-					if err := conn.Ping(nil); err != nil {
-						logger.Errorf("[heartbeat][interval] fail to send heartbeat: %v", err)
-						close(ch)
-						go conn.Close()
-						return
-					}
-
-					select {
-					case <-conn.Context().Done():
-						logger.Debugf("[heartbeat][timeout] context done => cancel")
-						return
-					case <-time.After(opt.HeartbeatTimeout):
-						logger.Errorf("[heartbeat][timeout] fail to listen heartbeat")
-						close(ch)
-						go conn.Close()
-						return
-					case <-ch:
-						logger.Debugf("[heartbeat][timeout] receive heartbeat <-")
-					}
-				}
+		for _, plugin := range s.plugins {
+			if err := plugin.Apply(conn); err != nil {
+				logger.Errorf("[plugin][%s] failed to apply(err: %s)", plugin.Name(), err)
+				conn.Close()
+				return err
 			}
-		}()
+
+			logger.Debugf("[plugin][%s] succeed to apply.", plugin.Name())
+		}
 
 		return nil
 	})
+
+	s.Plugin(heartbeat.New(func(o *heartbeat.Option) {
+		o.Interval = opt.HeartbeatInterval
+		o.Timeout = opt.HeartbeatTimeout
+	}))
 
 	return s, nil
 }
