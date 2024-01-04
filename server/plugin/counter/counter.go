@@ -1,6 +1,7 @@
 package counter
 
 import (
+	"github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/websocket/server/plugin"
 )
 
@@ -11,8 +12,8 @@ type Counter struct {
 
 	opt *Option
 	//
-	current int64
-	total   int64
+	current safe.Int64
+	total   safe.Int64
 }
 
 type Option struct {
@@ -34,9 +35,9 @@ func (hb *Counter) Name() string {
 }
 
 func (hb *Counter) CurrentCount() int64 {
-	return hb.current
+	return hb.current.Get()
 }
 
 func (hb *Counter) TotalCount() int64 {
-	return hb.total
+	return hb.total.Get()
 }
