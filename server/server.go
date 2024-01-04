@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -32,6 +33,8 @@ type Server interface {
 }
 
 type Option struct {
+	HearbeatInterval time.Duration
+	HeartbeatTimeout time.Duration
 }
 
 type server struct {
@@ -50,9 +53,16 @@ type server struct {
 }
 
 func New(opts ...func(opt *Option)) (Server, error) {
-	opt := &Option{}
+	opt := &Option{
+		HearbeatInterval: 25 * time.Second,
+		HeartbeatTimeout: 15 * time.Second,
+	}
 	for _, o := range opts {
 		o(opt)
+	}
+
+	if opt.HearbeatInterval < opt.HeartbeatTimeout {
+		return nil, fmt.Errorf("heartbeat interval must be greater than heartbeat timeout")
 	}
 
 	s := &server{
@@ -71,40 +81,34 @@ func New(opts ...func(opt *Option)) (Server, error) {
 		ch := make(chan struct{})
 		conn.Set("heartbeat", ch)
 
-		// heartbeat listener
+		// heartbeat
 		go func() {
-			logger.Debugf("heartbeat started")
-
-			timer := time.NewTicker(15 * time.Second)
+			time.After(opt.HearbeatInterval)
 			for {
 				select {
 				case <-conn.Context().Done():
-					logger.Debugf("[heartbeat][listener] context done => cancel")
+					logger.Debugf("[heartbeat][interval] context done => cancel")
 					return
-				case <-timer.C:
-					logger.Errorf("[heartbeat][listener] fail to listen heartbeat")
-					close(ch)
-					go conn.Close()
-					return
-				case <-ch:
-					logger.Debugf("[heartbeat][listener] receive heartbeat <-")
-					timer.Reset(15 * time.Second)
-				}
-			}
-		}()
-
-		// heartbeat sender
-		go func() {
-			for {
-				select {
-				case <-conn.Context().Done():
-					logger.Debugf("[heartbeat][sender] context done => cancel")
-					return
-				case <-time.After(10 * time.Second):
-					logger.Debugf("[heartbeat][sender] send heartbeat ->")
+				case <-time.After(opt.HearbeatInterval):
+					logger.Debugf("[heartbeat][interval] send heartbeat ->")
 					if err := conn.Ping(nil); err != nil {
-						logger.Errorf("[heartbeat][sender] fail to send heartbeat: %v", err)
+						logger.Errorf("[heartbeat][interval] fail to send heartbeat: %v", err)
+						close(ch)
+						go conn.Close()
 						return
+					}
+
+					select {
+					case <-conn.Context().Done():
+						logger.Debugf("[heartbeat][timeout] context done => cancel")
+						return
+					case <-time.After(opt.HeartbeatTimeout):
+						logger.Errorf("[heartbeat][timeout] fail to listen heartbeat")
+						close(ch)
+						go conn.Close()
+						return
+					case <-ch:
+						logger.Debugf("[heartbeat][timeout] receive heartbeat <-")
 					}
 				}
 			}

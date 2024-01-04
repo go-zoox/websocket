@@ -26,6 +26,8 @@ func Client() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			errCh := make(chan error)
+
 			wc, err := client.New(func(opt *client.Option) {
 				opt.Addr = c.String("dsn")
 			})
@@ -35,11 +37,13 @@ func Client() *cli.Command {
 
 			wc.OnError(func(conn conn.Conn, err error) error {
 				fmt.Println("websocket client error:", err)
+				errCh <- err
 				return nil
 			})
 
 			wc.OnClose(func(conn conn.Conn, code int, message string) error {
 				fmt.Println("websocket client closed")
+				errCh <- nil
 				return nil
 			})
 
@@ -105,11 +109,7 @@ func Client() *cli.Command {
 				return err
 			}
 
-			for {
-				select {}
-			}
-
-			return nil
+			return <-errCh
 		},
 	}
 }
