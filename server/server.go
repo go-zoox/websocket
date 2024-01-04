@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/go-zoox/eventemitter"
-	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/server/plugin"
+	"github.com/go-zoox/websocket/server/plugin/counter"
 	"github.com/go-zoox/websocket/server/plugin/heartbeat"
 )
 
@@ -77,24 +77,12 @@ func New(opts ...func(opt *Option)) (Server, error) {
 		plugins: make(map[string]plugin.Plugin),
 	}
 
-	s.OnConnect(func(conn conn.Conn) error {
-		for _, plugin := range s.plugins {
-			if err := plugin.Apply(conn); err != nil {
-				logger.Errorf("[plugin][%s] failed to apply(err: %s)", plugin.Name(), err)
-				conn.Close()
-				return err
-			}
-
-			logger.Debugf("[plugin][%s] succeed to apply.", plugin.Name())
-		}
-
-		return nil
-	})
-
 	s.Plugin(heartbeat.New(func(o *heartbeat.Option) {
 		o.Interval = opt.HeartbeatInterval
 		o.Timeout = opt.HeartbeatTimeout
 	}))
+
+	s.Plugin(counter.New())
 
 	return s, nil
 }

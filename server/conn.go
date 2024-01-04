@@ -3,7 +3,9 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/go-zoox/logger"
 	connClass "github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
 	"github.com/gorilla/websocket"
@@ -105,6 +107,20 @@ func (s *server) ServeConn(conn connClass.Conn) {
 		}
 	}()
 
+	// plugin
+	for _, plugin := range s.plugins {
+		if err := plugin.Apply(conn); err != nil {
+			logger.Errorf("[plugin][%s] failed to apply(err: %s)", plugin.Name(), err)
+			conn.Emit(event.TypeClose, &event.PayloadClose{
+				Code:    1,
+				Message: err.Error(),
+			})
+			return
+		}
+
+		logger.Debugf("[plugin][%s] succeed to apply.", plugin.Name())
+	}
+
 	conn.Emit(event.TypeConnect, &event.PayloadConnect{})
 
 	for {
@@ -115,12 +131,18 @@ func (s *server) ServeConn(conn connClass.Conn) {
 					Code:    v.Code,
 					Message: v.Text,
 				})
+
+				// @TODO
+				time.Sleep(1 * time.Second)
 				return
 			}
 
-			s.ee.Emit(event.TypeError, &event.PayloadError{
+			conn.Emit(event.TypeError, &event.PayloadError{
 				Error: err,
 			})
+
+			// @TODO
+			time.Sleep(1 * time.Second)
 			return
 		}
 

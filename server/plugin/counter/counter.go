@@ -1,20 +1,18 @@
-package heartbeat
+package counter
 
 import (
-	"time"
-
 	"github.com/go-zoox/websocket/server/plugin"
 )
 
-const name = "heartbeat"
+const name = "counter"
 
-type heartbeat struct {
+type counter struct {
 	opt *Option
+	//
+	Count int
 }
 
 type Option struct {
-	Interval time.Duration
-	Timeout  time.Duration
 }
 
 func New(opts ...func(opt *Option)) plugin.Plugin {
@@ -23,11 +21,11 @@ func New(opts ...func(opt *Option)) plugin.Plugin {
 		o(opt)
 	}
 
-	return &heartbeat{
+	return &counter{
 		opt: opt,
 	}
 }
 
-func (hb *heartbeat) Name() string {
+func (hb *counter) Name() string {
 	return name
 }
