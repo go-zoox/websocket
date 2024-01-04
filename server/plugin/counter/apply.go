@@ -5,17 +5,18 @@ import (
 	"github.com/go-zoox/websocket/conn"
 )
 
-func (c *counter) Apply(conn conn.Conn) error {
+func (c *Counter) Apply(conn conn.Conn) error {
 	conn.OnConnect(func() error {
-		c.Count += 1
+		c.current += 1
+		c.total += 1
 
-		logger.Infof("[connections] %d] -> ", c.Count)
+		logger.Infof("[connections] %d/%d] -> ", c.current, c.total)
 		return nil
 	})
 
 	conn.OnClose(func(code int, message string) error {
-		c.Count -= 1
-		logger.Infof("[connections: %d] <- ", c.Count)
+		c.current -= 1
+		logger.Infof("[connections: %d/%d] <- ", c.current, c.total)
 		return nil
 	})
 
