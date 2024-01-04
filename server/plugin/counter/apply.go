@@ -10,14 +10,14 @@ func (c *Counter) Apply(conn conn.Conn) error {
 		c.total.Set(c.total.Get() + 1)
 		c.current.Set(c.current.Get() + 1)
 
-		logger.Infof("[connections] %d/%d] -> ", c.current, c.total)
+		logger.Infof("[connections] %d/%d] -> ", c.current.Get(), c.total.Get())
 		return nil
 	})
 
 	conn.OnClose(func(code int, message string) error {
 		c.current.Set(c.current.Get() - 1)
 
-		logger.Infof("[connections: %d/%d] <- ", c.current, c.total)
+		logger.Infof("[connections: %d/%d] <- ", c.current.Get(), c.total.Get())
 		return nil
 	})
 
