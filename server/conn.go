@@ -141,6 +141,11 @@ func (s *server) ServeConn(conn connClass.Conn) {
 				Error: err,
 			})
 
+			conn.Emit(event.TypeClose, &event.PayloadClose{
+				Code:    -1,
+				Message: err.Error(),
+			})
+
 			// @TODO
 			time.Sleep(1 * time.Second)
 			return
