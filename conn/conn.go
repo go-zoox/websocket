@@ -65,13 +65,17 @@ type conn struct {
 }
 
 func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
+	ee := eventemitter.New(func(opt *eventemitter.Option) {
+		opt.Context = ctx
+	})
+
 	return &conn{
 		id:  uuid.V4(),
 		ctx: ctx,
 		raw: raw,
 		req: req,
 		//
-		ee:    eventemitter.New(),
+		ee:    ee,
 		cache: safe.NewMap(),
 	}
 }
