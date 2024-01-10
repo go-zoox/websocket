@@ -44,7 +44,7 @@ type Option struct {
 type server struct {
 	opt *Option
 	//
-	ee *eventemitter.EventEmitter
+	ee eventemitter.EventEmitter
 	//
 	cbs struct {
 		errors   []func(conn conn.Conn, err error) error

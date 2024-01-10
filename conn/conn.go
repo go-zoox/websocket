@@ -34,7 +34,7 @@ type Conn interface {
 	//
 	Request() *http.Request
 	//
-	On(typ string, handler eventemitter.Handle)
+	On(typ string, handler eventemitter.Handler)
 	Emit(typ string, payload any)
 	//
 	Get(key string) any
@@ -60,7 +60,7 @@ type conn struct {
 	raw *websocket.Conn
 	req *http.Request
 	//
-	ee    *eventemitter.EventEmitter
+	ee    eventemitter.EventEmitter
 	cache *safe.Map
 }
 
@@ -85,8 +85,6 @@ func (c *conn) Context() context.Context {
 }
 
 func (c *conn) Close() error {
-	defer c.ee.Stop()
-
 	return c.raw.Close()
 }
 
@@ -118,7 +116,7 @@ func (c *conn) Request() *http.Request {
 	return c.req
 }
 
-func (c *conn) On(typ string, handler eventemitter.Handle) {
+func (c *conn) On(typ string, handler eventemitter.Handler) {
 	c.ee.On(typ, handler)
 }
 
