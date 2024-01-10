@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-zoox/websocket/conn"
 )
@@ -47,11 +48,15 @@ type Option struct {
 	Context context.Context `json:"context"`
 	Addr    string          `json:"addr"`
 	Headers http.Header     `json:"headers"`
+
+	//
+	ConnectTimeout time.Duration `json:"connect_timeout"`
 }
 
 func New(opts ...func(opt *Option)) (Client, error) {
 	opt := &Option{
-		Context: context.Background(),
+		Context:        context.Background(),
+		ConnectTimeout: 30 * time.Second,
 	}
 	for _, o := range opts {
 		o(opt)
