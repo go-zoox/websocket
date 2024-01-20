@@ -219,6 +219,26 @@ func (c *conn) OnMessage(cb func(typ int, message []byte) error) {
 	}))
 }
 
+func (c *conn) OnTextMessage(cb func(message []byte) error) {
+	c.OnMessage(func(typ int, message []byte) error {
+		if typ == TextMessage {
+			return cb(message)
+		}
+
+		return nil
+	})
+}
+
+func (c *conn) OnBinaryMessage(cb func(message []byte) error) {
+	c.OnMessage(func(typ int, message []byte) error {
+		if typ == BinaryMessage {
+			return cb(message)
+		}
+
+		return nil
+	})
+}
+
 func (c *conn) OnConnect(cb func() error) {
 	c.On(event.TypeConnect, eventemitter.HandleFunc(func(payload any) {
 		_, ok := payload.(*event.PayloadConnect)
