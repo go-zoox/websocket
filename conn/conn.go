@@ -3,6 +3,7 @@ package conn
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-zoox/core-utils/safe"
@@ -62,6 +63,8 @@ type conn struct {
 	//
 	ee    eventemitter.EventEmitter
 	cache *safe.Map
+	//
+	sync.Mutex
 }
 
 func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
@@ -93,6 +96,9 @@ func (c *conn) Close() error {
 }
 
 func (c *conn) WriteMessage(typ int, msg []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
 	return c.raw.WriteMessage(typ, msg)
 }
 
@@ -105,10 +111,16 @@ func (c *conn) WriteBinaryMessage(msg []byte) error {
 }
 
 func (c *conn) Ping(msg []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
 	return c.raw.WriteControl(websocket.PingMessage, msg, time.Now().Add(time.Second))
 }
 
 func (c *conn) Pong(msg []byte) error {
+	c.Lock()
+	defer c.Unlock()
+
 	return c.raw.WriteControl(websocket.PongMessage, msg, time.Now().Add(time.Second))
 }
 
