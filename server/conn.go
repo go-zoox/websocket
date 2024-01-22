@@ -151,8 +151,8 @@ func (s *server) ServeConn(conn connClass.Conn) {
 			return
 		}
 
-		// do not hold the message reader
-		go conn.Emit(event.TypeMessage, &event.PayloadMessage{
+		// keep message in order
+		conn.Emit(event.TypeMessage, &event.PayloadMessage{
 			Type:    mt,
 			Message: message,
 		})
