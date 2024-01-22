@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/go-zoox/eventemitter"
+	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket/conn"
+	"github.com/go-zoox/websocket/event"
 	"github.com/go-zoox/websocket/server/plugin"
 	"github.com/go-zoox/websocket/server/plugin/counter"
 	"github.com/go-zoox/websocket/server/plugin/heartbeat"
@@ -76,6 +78,12 @@ func New(opts ...func(opt *Option)) (Server, error) {
 		ee:      eventemitter.New(),
 		plugins: make(map[string]plugin.Plugin),
 	}
+
+	s.ee.On(event.TypeError, eventemitter.HandleFunc(func(payload any) {
+		if err, ok := payload.(*event.PayloadError); ok {
+			logger.Errorf("[server] internal error: %s", err.Error)
+		}
+	}))
 
 	s.Plugin(heartbeat.New(func(o *heartbeat.Option) {
 		o.Interval = opt.HeartbeatInterval
