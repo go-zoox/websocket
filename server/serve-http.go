@@ -10,7 +10,7 @@ import (
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	connIns, err := s.CreateConn(w, r)
 	if err != nil {
-		connIns.Emit(event.TypeError, &event.PayloadError{
+		s.ee.Emit(event.TypeError, &event.PayloadError{
 			Error: fmt.Errorf("%v", err),
 		})
 		return
