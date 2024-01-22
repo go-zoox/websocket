@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-zoox/logger"
 	"github.com/go-zoox/websocket/conn"
 )
 
@@ -68,7 +69,15 @@ func New(opts ...func(opt *Option)) (Client, error) {
 
 	// listen server heartbeat (server ping + client pong)
 	client.OnPing(func(conn conn.Conn, message []byte) error {
-		return conn.Pong(message)
+		logger.Debugf("[heartbeat][interval][ping] receive heartbeat <-")
+
+		if err := conn.Pong(message); err != nil {
+			logger.Errorf("[heartbeat][interval] fail to send heartbeat: %v", err)
+			return err
+		}
+
+		logger.Debugf("[heartbeat][interval][pong] send heartbeat ->")
+		return nil
 	})
 
 	return client, nil
