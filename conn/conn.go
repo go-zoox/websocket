@@ -62,7 +62,7 @@ type conn struct {
 	req *http.Request
 	//
 	ee    eventemitter.EventEmitter
-	cache *safe.Map
+	cache *safe.Map[string, any]
 	//
 	sync.Mutex
 }
@@ -79,7 +79,7 @@ func New(ctx context.Context, raw *websocket.Conn, req *http.Request) Conn {
 		req: req,
 		//
 		ee:    ee,
-		cache: safe.NewMap(),
+		cache: safe.NewMap[string, any](),
 	}
 }
 
