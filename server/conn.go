@@ -186,7 +186,9 @@ func middlewareChain[T any](ctx T, middlewares []func(ctx T, next func(err error
 			return
 		}
 
-		middlewareChain(ctx, rest, final)
+		if errxx := middlewareChain(ctx, rest, final); errxx != nil {
+			err = errxx
+		}
 	}
 
 	first(ctx, next)
