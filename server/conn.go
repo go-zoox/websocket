@@ -121,15 +121,30 @@ func (s *server) ServeConn(conn connClass.Conn) {
 		logger.Debugf("[plugin][%s] succeed to apply.", plugin.Name())
 	}
 
-	conn.Emit(event.TypeConnect, &event.PayloadConnect{})
+	handler := func(conn connClass.Conn) {
+		conn.Emit(event.TypeConnect, &event.PayloadConnect{})
 
-	for {
-		mt, message, err := conn.ReadMessage()
-		if err != nil {
-			if v, ok := err.(*websocket.CloseError); ok {
+		for {
+			mt, message, err := conn.ReadMessage()
+			if err != nil {
+				if v, ok := err.(*websocket.CloseError); ok {
+					conn.Emit(event.TypeClose, &event.PayloadClose{
+						Code:    v.Code,
+						Message: v.Text,
+					})
+
+					// @TODO
+					time.Sleep(1 * time.Second)
+					return
+				}
+
+				conn.Emit(event.TypeError, &event.PayloadError{
+					Error: err,
+				})
+
 				conn.Emit(event.TypeClose, &event.PayloadClose{
-					Code:    v.Code,
-					Message: v.Text,
+					Code:    -1,
+					Message: err.Error(),
 				})
 
 				// @TODO
@@ -137,24 +152,43 @@ func (s *server) ServeConn(conn connClass.Conn) {
 				return
 			}
 
-			conn.Emit(event.TypeError, &event.PayloadError{
-				Error: err,
+			// keep message in order
+			conn.Emit(event.TypeMessage, &event.PayloadMessage{
+				Type:    mt,
+				Message: message,
 			})
+		}
+	}
 
-			conn.Emit(event.TypeClose, &event.PayloadClose{
-				Code:    -1,
-				Message: err.Error(),
-			})
+	if err := middlewareChain(conn, s.cbs.middlewares, handler); err != nil {
+		conn.Emit(event.TypeError, &event.PayloadError{
+			Error: err,
+		})
 
-			// @TODO
-			time.Sleep(1 * time.Second)
+		conn.Emit(event.TypeClose, &event.PayloadClose{
+			Code:    -1,
+			Message: err.Error(),
+		})
+	}
+}
+
+func middlewareChain[T any](ctx T, middlewares []func(ctx T, next func(err error)), final func(ctx T)) (err error) {
+	if len(middlewares) == 0 {
+		final(ctx)
+		return nil
+	}
+
+	first := middlewares[0]
+	rest := middlewares[1:]
+	next := func(errx error) {
+		if errx != nil {
+			err = errx
 			return
 		}
 
-		// keep message in order
-		conn.Emit(event.TypeMessage, &event.PayloadMessage{
-			Type:    mt,
-			Message: message,
-		})
+		middlewareChain(ctx, rest, final)
 	}
+
+	first(ctx, next)
+	return
 }
