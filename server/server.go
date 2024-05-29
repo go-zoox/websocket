@@ -37,7 +37,7 @@ type Server interface {
 	//
 	Plugin(plugin plugin.Plugin) error
 	//
-	Use(middleware func(conn conn.Conn, next func(err error)))
+	Use(middleware func(conn conn.Conn, next func()))
 }
 
 type Option struct {
@@ -58,7 +58,7 @@ type server struct {
 		pings    []func(conn conn.Conn, message []byte) error
 		pongs    []func(conn conn.Conn, message []byte) error
 		//
-		middlewares []func(conn conn.Conn, next func(err error))
+		middlewares []func(conn conn.Conn, next func())
 	}
 	//
 	plugins map[string]plugin.Plugin

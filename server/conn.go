@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/safe"
 	connClass "github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
 	"github.com/gorilla/websocket"
@@ -160,7 +161,11 @@ func (s *server) ServeConn(conn connClass.Conn) {
 		}
 	}
 
-	if err := middlewareChain(conn, s.cbs.middlewares, handler); err != nil {
+	err := safe.Do(func() error {
+		middlewareChain(conn, s.cbs.middlewares, handler)
+		return nil
+	})
+	if err != nil {
 		conn.Emit(event.TypeError, &event.PayloadError{
 			Error: err,
 		})
@@ -172,25 +177,17 @@ func (s *server) ServeConn(conn connClass.Conn) {
 	}
 }
 
-func middlewareChain[T any](ctx T, middlewares []func(ctx T, next func(err error)), final func(ctx T)) (err error) {
+func middlewareChain[T any](ctx T, middlewares []func(ctx T, next func()), final func(ctx T)) {
 	if len(middlewares) == 0 {
 		final(ctx)
-		return nil
+		return
 	}
 
 	first := middlewares[0]
 	rest := middlewares[1:]
-	next := func(errx error) {
-		if errx != nil {
-			err = errx
-			return
-		}
-
-		if errxx := middlewareChain(ctx, rest, final); errxx != nil {
-			err = errxx
-		}
+	next := func() {
+		middlewareChain(ctx, rest, final)
 	}
 
 	first(ctx, next)
-	return
 }
