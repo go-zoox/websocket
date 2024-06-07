@@ -59,6 +59,8 @@ type server struct {
 		pongs    []func(conn conn.Conn, message []byte) error
 		//
 		middlewares []func(conn conn.Conn, next func())
+		//
+		events map[string][]func(conn conn.Conn, payload *EventPayload) error
 	}
 	//
 	plugins map[string]plugin.Plugin
@@ -95,6 +97,31 @@ func New(opts ...func(opt *Option)) (Server, error) {
 	}))
 
 	s.Plugin(counter.New())
+
+	s.OnTextMessage(func(c conn.Conn, message []byte) error {
+		eventX := &Event{}
+		if err := eventX.Decode(message); err != nil {
+			return err
+		}
+
+		if fns, ok := s.cbs.events[eventX.Type]; ok {
+			for _, fn := range fns {
+				go (func(fn func(c conn.Conn, payload *EventPayload) error) {
+					if err := fn(c, &eventX.Payload); err != nil {
+						s.ee.Emit(event.TypeError, &event.PayloadError{
+							Error: fmt.Errorf("failed to handle event(type: %s): %v", eventX.Type, err),
+						})
+					}
+				})(fn)
+			}
+		} else if !ok {
+			s.ee.Emit(event.TypeError, &event.PayloadError{
+				Error: fmt.Errorf("supported event type: %s", eventX.Type),
+			})
+		}
+
+		return nil
+	})
 
 	return s, nil
 }

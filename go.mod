@@ -7,7 +7,7 @@ require (
 	github.com/go-zoox/core-utils v1.4.1
 	github.com/go-zoox/eventemitter v1.4.0
 	github.com/go-zoox/logger v1.4.6
-	github.com/go-zoox/random v1.0.4
+	github.com/go-zoox/safe v1.0.1
 	github.com/go-zoox/uuid v0.0.1
 	github.com/gorilla/websocket v1.5.1
 )
@@ -24,7 +24,6 @@ require (
 	github.com/go-zoox/errors v1.0.2 // indirect
 	github.com/go-zoox/fs v1.3.13 // indirect
 	github.com/go-zoox/ini v1.0.4 // indirect
-	github.com/go-zoox/safe v1.0.1 // indirect
 	github.com/go-zoox/tag v1.2.6 // indirect
 	github.com/goccy/go-yaml v1.9.8 // indirect
 	github.com/google/uuid v1.3.0 // indirect
