@@ -7,8 +7,10 @@ import (
 
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/safe"
 	"github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
+	"github.com/go-zoox/websocket/event/cs"
 	"github.com/go-zoox/websocket/server/plugin"
 	"github.com/go-zoox/websocket/server/plugin/counter"
 	"github.com/go-zoox/websocket/server/plugin/heartbeat"
@@ -60,7 +62,7 @@ type server struct {
 		//
 		middlewares []func(conn conn.Conn, next func())
 		//
-		events map[string][]func(conn conn.Conn, payload *EventPayload) error
+		events map[string][]func(conn conn.Conn, payload *cs.EventPayload, callback func(ep *cs.EventPayload)) error
 	}
 	//
 	plugins map[string]plugin.Plugin
@@ -99,24 +101,40 @@ func New(opts ...func(opt *Option)) (Server, error) {
 	s.Plugin(counter.New())
 
 	s.OnTextMessage(func(c conn.Conn, message []byte) error {
-		eventX := &Event{}
-		if err := eventX.Decode(message); err != nil {
+		eventRequest := &cs.Event{}
+		if err := eventRequest.Decode(message); err != nil {
 			return err
 		}
 
-		if fns, ok := s.cbs.events[eventX.Type]; ok {
+		if fns, ok := s.cbs.events[eventRequest.Type]; ok {
 			for _, fn := range fns {
-				go (func(fn func(c conn.Conn, payload *EventPayload) error) {
-					if err := fn(c, &eventX.Payload); err != nil {
+				go (func(fn func(c conn.Conn, payload *cs.EventPayload, callback func(ep *cs.EventPayload)) error) {
+					err := safe.Do(func() error {
+						return fn(c, &eventRequest.Payload, func(ep *cs.EventPayload) {
+							eventResponse := &cs.Event{
+								ID:      eventRequest.ID,
+								Type:    eventRequest.Type,
+								Payload: *ep,
+							}
+							if er, err := eventResponse.Encode(); err != nil {
+								s.ee.Emit(event.TypeError, &event.PayloadError{
+									Error: fmt.Errorf("[event][id: %s] failed to encode event: %v", eventRequest.ID, err),
+								})
+							} else {
+								c.WriteTextMessage(er)
+							}
+						})
+					})
+					if err != nil {
 						s.ee.Emit(event.TypeError, &event.PayloadError{
-							Error: fmt.Errorf("failed to handle event(type: %s): %v", eventX.Type, err),
+							Error: fmt.Errorf("[event][id: %s] failed to handle event(type: %s): %v", eventRequest.ID, eventRequest.Type, err),
 						})
 					}
 				})(fn)
 			}
 		} else if !ok {
 			s.ee.Emit(event.TypeError, &event.PayloadError{
-				Error: fmt.Errorf("supported event type: %s", eventX.Type),
+				Error: fmt.Errorf("supported event type: %s", eventRequest.Type),
 			})
 		}
 
