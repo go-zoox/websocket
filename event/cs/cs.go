@@ -49,6 +49,8 @@ func (ep *EventPayload) Decode(data any) error {
 		return fmt.Errorf("failed to decode event payload(%s): %s", ep.Raw, err)
 	}
 
+	ep.Data = data
+
 	return nil
 }
 
