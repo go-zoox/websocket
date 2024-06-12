@@ -7,14 +7,23 @@ import (
 	"github.com/go-zoox/websocket/event/cs"
 )
 
+type EventConfig struct {
+	IsSubscribe bool
+}
+
+type EventOption func(cfg *EventConfig)
+
 // Event triggers a event with handler
-func (c *client) Event(typ string, payload any, callback func(*cs.EventPayload)) error {
+func (c *client) Event(typ string, payload cs.EventPayload, callback func(err error, payload cs.EventPayload), opts ...EventOption) error {
+	cfg := &EventConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	event := &cs.Event{
-		ID:   uuid.V4(),
-		Type: typ,
-		Payload: cs.EventPayload{
-			Data: payload,
-		},
+		ID:      uuid.V4(),
+		Type:    typ,
+		Payload: payload,
 	}
 
 	bytes, err := event.Encode()
@@ -22,7 +31,18 @@ func (c *client) Event(typ string, payload any, callback func(*cs.EventPayload))
 		return fmt.Errorf("failed to encode event: %s", err)
 	}
 
-	c.cbs.events[event.ID] = callback
+	ch := make(chan error)
+	c.cbs.events[event.ID] = EventCallback{
+		Callback: func(err error, payload cs.EventPayload) {
+			callback(err, payload)
+			ch <- err
+		},
+		IsSubscribe: cfg.IsSubscribe,
+	}
 
-	return c.conn.WriteTextMessage(bytes)
+	if err := c.conn.WriteTextMessage(bytes); err != nil {
+		return err
+	}
+
+	return <-ch
 }

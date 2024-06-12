@@ -31,6 +31,9 @@ type Client interface {
 	Connect() error
 	Close() error
 	Reconnect() error
+
+	//
+	Event(typ string, payload cs.EventPayload, callback func(err error, payload cs.EventPayload), opts ...EventOption) error
 }
 
 type client struct {
@@ -46,8 +49,13 @@ type client struct {
 		pings    []func(conn conn.Conn, message []byte) error
 		pongs    []func(conn conn.Conn, message []byte) error
 		//
-		events map[string]func(*cs.EventPayload)
+		events map[string]EventCallback
 	}
+}
+
+type EventCallback struct {
+	Callback    func(err error, payload cs.EventPayload)
+	IsSubscribe bool
 }
 
 type Option struct {
@@ -71,6 +79,7 @@ func New(opts ...func(opt *Option)) (Client, error) {
 	c := &client{
 		opt: opt,
 	}
+	c.cbs.events = make(map[string]EventCallback)
 
 	// listen server heartbeat (server ping + client pong)
 	c.OnPing(func(conn conn.Conn, message []byte) error {
@@ -87,22 +96,32 @@ func New(opts ...func(opt *Option)) (Client, error) {
 
 	// event
 	c.OnTextMessage(func(conn conn.Conn, message []byte) error {
-		eventResponse := &cs.Event{}
-		if err := eventResponse.Decode(message); err != nil {
-			return err
-		}
-
-		if fn, ok := c.cbs.events[eventResponse.ID]; ok {
-			delete(c.cbs.events, eventResponse.ID)
-
-			err := safe.Do(func() error {
-				fn(&eventResponse.Payload)
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("failed to handle event callback: %v", err)
+		go func() {
+			event := &cs.Event{}
+			if err := event.Decode(message); err != nil {
+				logger.Errorf("[event] failed to decode: %s (message: %s)", err, string(message))
+				// return err
 			}
-		}
+
+			if fn, ok := c.cbs.events[event.ID]; ok {
+				if !fn.IsSubscribe {
+					delete(c.cbs.events, event.ID)
+				}
+
+				err := safe.Do(func() error {
+					var err error
+					if event.Error != "" {
+						err = fmt.Errorf(event.Error)
+					}
+
+					fn.Callback(err, event.Payload)
+					return nil
+				})
+				if err != nil {
+					logger.Errorf("failed to handle event callback: %v", err)
+				}
+			}
+		}()
 
 		return nil
 	})

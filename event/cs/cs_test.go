@@ -1,14 +1,16 @@
 package cs
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestEvent(t *testing.T) {
 	// encode and decode
 	before := Event{
 		ID:   "1",
 		Type: "type",
-		Payload: EventPayload{
-			Data: "payload",
+		Payload: map[string]any{
+			"key": "value",
 		},
 	}
 
@@ -30,12 +32,7 @@ func TestEvent(t *testing.T) {
 		t.Fatalf("expect: %s, got: %s", before.Type, after.Type)
 	}
 
-	var v string
-	if err := after.Payload.Decode(&v); err != nil {
-		t.Fatal(err)
-	}
-
-	if after.Payload.Data != before.Payload.Data {
-		t.Fatalf("expect: %v, got: %v", before.Payload.Data, after.Payload.Data)
+	if after.Payload["key"] != before.Payload["key"] {
+		t.Fatalf("expect: %v, got: %v", before.Payload, after.Payload)
 	}
 }
