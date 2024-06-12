@@ -31,10 +31,29 @@ func (c *client) Event(typ string, payload cs.EventPayload, callback func(err er
 		return fmt.Errorf("failed to encode event: %s", err)
 	}
 
-	c.cbs.events[event.ID] = EventCallback{
-		Callback:    callback,
-		IsSubscribe: cfg.IsSubscribe,
+	// subscribe event -> no need to wait for response
+	if cfg.IsSubscribe {
+		c.cbs.events[event.ID] = EventCallback{
+			Callback:    callback,
+			IsSubscribe: true,
+		}
+
+		return c.conn.WriteTextMessage(bytes)
 	}
 
-	return c.conn.WriteTextMessage(bytes)
+	// non-subscribe event -> wait for response
+	done := make(chan struct{})
+	c.cbs.events[event.ID] = EventCallback{
+		Callback: func(err error, payload cs.EventPayload) {
+			callback(err, payload)
+			done <- struct{}{}
+		},
+	}
+
+	if err := c.conn.WriteTextMessage(bytes); err != nil {
+		return fmt.Errorf("failed to write text message: %s", err)
+	}
+
+	<-done
+	return nil
 }
