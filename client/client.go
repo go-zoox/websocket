@@ -2,11 +2,14 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-zoox/logger"
+	"github.com/go-zoox/safe"
 	"github.com/go-zoox/websocket/conn"
+	"github.com/go-zoox/websocket/event/cs"
 )
 
 type Client interface {
@@ -28,6 +31,9 @@ type Client interface {
 	Connect() error
 	Close() error
 	Reconnect() error
+
+	//
+	Event(typ string, payload cs.EventPayload, callback func(err error, payload cs.EventPayload), opts ...EventOption) error
 }
 
 type client struct {
@@ -42,7 +48,14 @@ type client struct {
 		messages []func(conn conn.Conn, typ int, message []byte) error
 		pings    []func(conn conn.Conn, message []byte) error
 		pongs    []func(conn conn.Conn, message []byte) error
+		//
+		events map[string]EventCallback
 	}
+}
+
+type EventCallback struct {
+	Callback    func(err error, payload cs.EventPayload)
+	IsSubscribe bool
 }
 
 type Option struct {
@@ -63,12 +76,13 @@ func New(opts ...func(opt *Option)) (Client, error) {
 		o(opt)
 	}
 
-	client := &client{
+	c := &client{
 		opt: opt,
 	}
+	c.cbs.events = make(map[string]EventCallback)
 
 	// listen server heartbeat (server ping + client pong)
-	client.OnPing(func(conn conn.Conn, message []byte) error {
+	c.OnPing(func(conn conn.Conn, message []byte) error {
 		logger.Debugf("[heartbeat][interval][ping] receive heartbeat <-")
 
 		if err := conn.Pong(message); err != nil {
@@ -80,5 +94,38 @@ func New(opts ...func(opt *Option)) (Client, error) {
 		return nil
 	})
 
-	return client, nil
+	// event
+	c.OnTextMessage(func(conn conn.Conn, message []byte) error {
+		go func() {
+			event := &cs.Event{}
+			if err := event.Decode(message); err != nil {
+				logger.Errorf("[event] failed to decode: %s (message: %s)", err, string(message))
+				// return err
+				return
+			}
+
+			if fn, ok := c.cbs.events[event.ID]; ok {
+				if !fn.IsSubscribe {
+					delete(c.cbs.events, event.ID)
+				}
+
+				err := safe.Do(func() error {
+					var err error
+					if event.Error != "" {
+						err = errors.New(event.Error)
+					}
+
+					fn.Callback(err, event.Payload)
+					return nil
+				})
+				if err != nil {
+					logger.Errorf("[event] failed to handle event callback: %v", err)
+				}
+			}
+		}()
+
+		return nil
+	})
+
+	return c, nil
 }
