@@ -31,18 +31,10 @@ func (c *client) Event(typ string, payload cs.EventPayload, callback func(err er
 		return fmt.Errorf("failed to encode event: %s", err)
 	}
 
-	ch := make(chan error)
 	c.cbs.events[event.ID] = EventCallback{
-		Callback: func(err error, payload cs.EventPayload) {
-			callback(err, payload)
-			ch <- err
-		},
+		Callback:    callback,
 		IsSubscribe: cfg.IsSubscribe,
 	}
 
-	if err := c.conn.WriteTextMessage(bytes); err != nil {
-		return err
-	}
-
-	return <-ch
+	return c.conn.WriteTextMessage(bytes)
 }

@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
 
@@ -101,6 +101,7 @@ func New(opts ...func(opt *Option)) (Client, error) {
 			if err := event.Decode(message); err != nil {
 				logger.Errorf("[event] failed to decode: %s (message: %s)", err, string(message))
 				// return err
+				return
 			}
 
 			if fn, ok := c.cbs.events[event.ID]; ok {
@@ -111,14 +112,14 @@ func New(opts ...func(opt *Option)) (Client, error) {
 				err := safe.Do(func() error {
 					var err error
 					if event.Error != "" {
-						err = fmt.Errorf(event.Error)
+						err = errors.New(event.Error)
 					}
 
 					fn.Callback(err, event.Payload)
 					return nil
 				})
 				if err != nil {
-					logger.Errorf("failed to handle event callback: %v", err)
+					logger.Errorf("[event] failed to handle event callback: %v", err)
 				}
 			}
 		}()
