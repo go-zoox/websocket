@@ -7,10 +7,8 @@ import (
 
 	"github.com/go-zoox/eventemitter"
 	"github.com/go-zoox/logger"
-	"github.com/go-zoox/safe"
 	"github.com/go-zoox/websocket/conn"
 	"github.com/go-zoox/websocket/event"
-	"github.com/go-zoox/websocket/event/cs"
 	"github.com/go-zoox/websocket/server/plugin"
 	"github.com/go-zoox/websocket/server/plugin/counter"
 	"github.com/go-zoox/websocket/server/plugin/heartbeat"
@@ -40,8 +38,6 @@ type Server interface {
 	Plugin(plugin plugin.Plugin) error
 	//
 	Use(middleware func(conn conn.Conn, next func()))
-	//
-	Event(name string, fn func(conn conn.Conn, payload cs.EventPayload, callback func(error, cs.EventPayload)))
 }
 
 type Option struct {
@@ -63,8 +59,6 @@ type server struct {
 		pongs    []func(conn conn.Conn, message []byte) error
 		//
 		middlewares []func(conn conn.Conn, next func())
-		//
-		events map[string][]func(conn conn.Conn, payload cs.EventPayload, callback func(err error, ep cs.EventPayload))
 	}
 	//
 	plugins map[string]plugin.Plugin
@@ -89,8 +83,6 @@ func New(opts ...func(opt *Option)) (Server, error) {
 		plugins: make(map[string]plugin.Plugin),
 	}
 
-	s.cbs.events = make(map[string][]func(conn conn.Conn, payload cs.EventPayload, callback func(err error, ep cs.EventPayload)))
-
 	s.ee.On(event.TypeError, eventemitter.HandleFunc(func(payload any) {
 		if err, ok := payload.(*event.PayloadError); ok {
 			logger.Errorf("[server] internal error: %s", err.Error)
@@ -103,58 +95,6 @@ func New(opts ...func(opt *Option)) (Server, error) {
 	}))
 
 	s.Plugin(counter.New())
-
-	s.OnTextMessage(func(c conn.Conn, message []byte) error {
-		eventRequest := &cs.Event{}
-		if err := eventRequest.Decode(message); err != nil {
-			return err
-		}
-
-		if fns, ok := s.cbs.events[eventRequest.Type]; ok {
-			for _, fn := range fns {
-				go (func(fn func(c conn.Conn, payload cs.EventPayload, callback func(err error, payload cs.EventPayload))) {
-					err := safe.Do(func() error {
-						fn(c, eventRequest.Payload, func(err error, payload cs.EventPayload) {
-							eventResponse := &cs.Event{
-								ID:      eventRequest.ID,
-								Type:    eventRequest.Type,
-								Payload: payload,
-							}
-							if err != nil {
-								eventResponse.Error = err.Error()
-							}
-
-							if er, errx := eventResponse.Encode(); errx != nil {
-								s.ee.Emit(event.TypeError, &event.PayloadError{
-									Error: fmt.Errorf("[event][id: %s] failed to encode event: %v", eventRequest.ID, errx),
-								})
-							} else {
-								err := c.WriteTextMessage(er)
-								if err != nil {
-									s.ee.Emit(event.TypeError, &event.PayloadError{
-										Error: fmt.Errorf("[event][id: %s] failed to write text message: %v", eventRequest.ID, err),
-									})
-								}
-							}
-						})
-
-						return nil
-					})
-					if err != nil {
-						s.ee.Emit(event.TypeError, &event.PayloadError{
-							Error: fmt.Errorf("[event][id: %s] failed to handle event(type: %s): %v", eventRequest.ID, eventRequest.Type, err),
-						})
-					}
-				})(fn)
-			}
-		} else if !ok {
-			s.ee.Emit(event.TypeError, &event.PayloadError{
-				Error: fmt.Errorf("supported event type: %s", eventRequest.Type),
-			})
-		}
-
-		return nil
-	})
 
 	return s, nil
 }

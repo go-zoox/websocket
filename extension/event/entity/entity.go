@@ -1,4 +1,4 @@
-package cs
+package entity
 
 import (
 	"encoding/json"
