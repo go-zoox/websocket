@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	cus "github.com/go-zoox/core-utils/safe"
 	"github.com/go-zoox/logger"
 	"github.com/go-zoox/safe"
 	"github.com/go-zoox/uuid"
@@ -19,7 +20,7 @@ type Client interface {
 type client struct {
 	core websocket.Client
 	//
-	cbs map[string]EventCallback
+	cbs *cus.Map[string, *EventCallback]
 }
 
 type EventCallback struct {
@@ -30,7 +31,7 @@ type EventCallback struct {
 func New(core websocket.Client) Client {
 	c := &client{
 		core: core,
-		cbs:  make(map[string]EventCallback),
+		cbs:  cus.NewMap[string, *EventCallback](),
 	}
 
 	// event
@@ -43,9 +44,10 @@ func New(core websocket.Client) Client {
 				return
 			}
 
-			if fn, ok := c.cbs[event.ID]; ok {
+			if fn := c.cbs.Get(event.ID); fn != nil {
 				if !fn.IsSubscribe {
-					delete(c.cbs, event.ID)
+					// delete(c.cbs, event.ID)
+					c.cbs.Del(event.ID)
 				}
 
 				err := safe.Do(func() error {
@@ -94,22 +96,22 @@ func (c *client) Emit(typ string, payload entity.EventPayload, callback func(err
 
 	// subscribe event -> no need to wait for response
 	if cfg.IsSubscribe {
-		c.cbs[event.ID] = EventCallback{
+		c.cbs.Set(event.ID, &EventCallback{
 			Callback:    callback,
 			IsSubscribe: true,
-		}
+		})
 
 		return c.core.SendMessage(bytes)
 	}
 
 	// non-subscribe event -> wait for response
 	done := make(chan struct{})
-	c.cbs[event.ID] = EventCallback{
+	c.cbs.Set(event.ID, &EventCallback{
 		Callback: func(err error, payload entity.EventPayload) {
 			callback(err, payload)
 			done <- struct{}{}
 		},
-	}
+	})
 
 	if err := c.core.SendMessage(bytes); err != nil {
 		return fmt.Errorf("failed to write text message: %s", err)
