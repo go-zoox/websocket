@@ -29,7 +29,9 @@ type Client interface {
 	Close() error
 	Reconnect() error
 
-	SendMessage(message []byte) error
+	SendMessage(typ int, message []byte) error
+	//
+	SendTextMessage(message []byte) error
 	SendBinaryMessage(message []byte) error
 }
 

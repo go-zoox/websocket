@@ -28,7 +28,11 @@ func (c *client) OnBinaryMessage(cb func(conn conn.Conn, message []byte) error) 
 	})
 }
 
-func (c *client) SendMessage(message []byte) error {
+func (c *client) SendMessage(typ int, message []byte) error {
+	return c.conn.WriteMessage(typ, message)
+}
+
+func (c *client) SendTextMessage(message []byte) error {
 	return c.conn.WriteMessage(conn.TextMessage, message)
 }
 

@@ -101,7 +101,7 @@ func (c *client) Emit(typ string, payload entity.EventPayload, callback func(err
 			IsSubscribe: true,
 		})
 
-		return c.core.SendMessage(bytes)
+		return c.core.SendTextMessage(bytes)
 	}
 
 	// non-subscribe event -> wait for response
@@ -113,7 +113,7 @@ func (c *client) Emit(typ string, payload entity.EventPayload, callback func(err
 		},
 	})
 
-	if err := c.core.SendMessage(bytes); err != nil {
+	if err := c.core.SendTextMessage(bytes); err != nil {
 		return fmt.Errorf("failed to write text message: %s", err)
 	}
 
