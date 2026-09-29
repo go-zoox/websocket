@@ -1,7 +1,9 @@
 package server
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -132,6 +134,19 @@ func (s *server) ServeConn(conn connClass.Conn) {
 					conn.Emit(event.TypeClose, &event.PayloadClose{
 						Code:    v.Code,
 						Message: v.Text,
+					})
+
+					// @TODO
+					time.Sleep(1 * time.Second)
+					return
+				}
+
+				// the connection is closed by ourselves, e.g. closed by
+				// heartbeat timeout, which is a normal close, not an error.
+				if errors.Is(err, net.ErrClosed) {
+					conn.Emit(event.TypeClose, &event.PayloadClose{
+						Code:    -1,
+						Message: err.Error(),
 					})
 
 					// @TODO
